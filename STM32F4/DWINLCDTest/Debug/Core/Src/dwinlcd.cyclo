@@ -1,0 +1,17 @@
+../Core/Src/dwinlcd.c:16:6:DWINDriverInit	1
+../Core/Src/dwinlcd.c:22:19:DWINSendCommand	1
+../Core/Src/dwinlcd.c:26:6:DWINDriverListening	1
+../Core/Src/dwinlcd.c:32:19:isConnected	7
+../Core/Src/dwinlcd.c:57:6:nextPage	2
+../Core/Src/dwinlcd.c:74:6:previousPage	5
+../Core/Src/dwinlcd.c:95:6:gotoPage	1
+../Core/Src/dwinlcd.c:101:6:writeSingleReg	1
+../Core/Src/dwinlcd.c:110:6:writeData	2
+../Core/Src/dwinlcd.c:126:6:setSingleBit	1
+../Core/Src/dwinlcd.c:134:6:resetSingleBit	1
+../Core/Src/dwinlcd.c:145:10:readSingleReg	1
+../Core/Src/dwinlcd.c:154:19:readSingleBit	2
+../Core/Src/dwinlcd.c:166:6:readReg	1
+../Core/Src/dwinlcd.c:174:6:readRTC	1
+../Core/Src/dwinlcd.c:185:6:writeRTC	1
+../Core/Src/dwinlcd.c:189:6:buzzer	4
