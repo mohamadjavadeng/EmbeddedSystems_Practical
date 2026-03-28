@@ -16,9 +16,20 @@ typedef struct{
 	UART_HandleTypeDef *huart;
 	uint8_t responseBuffer[RESPONSEBUFFER];
 	uint16_t resLength;
-
 	uint8_t rxComplete;
+	uint8_t cmdType;
 }dwinDriver;
+
+typedef enum{
+	pageChange = 0,
+	wrData,
+	rdSingleReg,
+	rdSingleBit,
+	rdRegisters,
+	rdRTC,
+	buzOn
+}functionCode;
+
 
 typedef enum {
     BUZZ_1SEC = 0,
@@ -49,7 +60,7 @@ void nextPage(dwinDriver *driver);
 void previousPage(dwinDriver *driver);
 void gotoPage(dwinDriver *driver, const uint16_t page);
 void writeSingleReg(dwinDriver *driver, const uint16_t registeraddress, const uint16_t value);
-void writeData(dwinDriver *driver, const uint16_t registeraddress, const uint8_t data[], const uint8_t length);
+void writeData(dwinDriver *driver, const uint16_t registeraddress, const uint8_t *data, const uint16_t length);
 void setSingleBit(dwinDriver *driver, const uint16_t registeraddress, const uint16_t Bitnumber);
 void resetSingleBit(dwinDriver *driver, const uint16_t registeraddress, const uint16_t Bitnumber);
 uint16_t readSingleReg(dwinDriver *driver, const uint16_t registeraddress);
@@ -59,5 +70,9 @@ void readRTC(dwinDriver *driver);
 void writeRTC(dwinDriver *driver, uint8_t dayrtc, uint8_t monthrtc, uint8_t yearrtc, uint8_t hourrtc, uint8_t minutertc, uint8_t secondrtc, weekdays weekdayrtc);
 void buzzer(dwinDriver *driver, buzzer_duration buzzer);
 
-
+// Handling functions
+HAL_StatusTypeDef writeDataHandler(dwinDriver *driver, uint16_t len);
+HAL_StatusTypeDef readRTCHandler(dwinDriver *driver, uint8_t year,
+									uint8_t month, uint8_t day, uint8_t weekday,
+									uint8_t hour, uint8_t minute, uint8_t second);
 #endif /* INC_DWINLCD_H_ */

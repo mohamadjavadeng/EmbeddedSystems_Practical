@@ -66,6 +66,37 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         uart1_driver.resLength = Size;
         uart1_driver.rxComplete = 1;
         HAL_UART_Transmit(&huart3, uart1_driver.responseBuffer, uart1_driver.resLength, 100);
+        uint8_t FC = uart1_driver.cmdType;
+                switch(FC){
+                	case pageChange:{
+                		// Do nothing
+                		break;
+                	}
+                	case wrData:{
+                		// check the first and Second and third element of Response buffer
+                		writeDataHandler(&uart1_driver, Size);
+                		break;
+                	}
+                	case rdSingleReg:{
+                		// check data is available or not
+
+                		break;
+                	}
+                	case rdSingleBit:{
+                		// check data is available or not
+
+        				break;
+                	}
+                	case rdRTC:{
+                		//set the values for RTC
+                		break;
+                	}
+                	case buzOn:{
+                		break;
+                	}
+                	default: break;
+
+                }
         DWINDriverListening(&uart1_driver);
     }
 

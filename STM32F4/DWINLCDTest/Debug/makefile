@@ -60,8 +60,8 @@ all: main-build
 main-build: DWINLCDTest.elf secondary-outputs
 
 # Tool invocations
-DWINLCDTest.elf DWINLCDTest.map: $(OBJS) $(USER_OBJS) E:\Embedded\STM32ModbusModule\DWINLCDTest\STM32F407ZGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "DWINLCDTest.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"E:\Embedded\STM32ModbusModule\DWINLCDTest\STM32F407ZGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="DWINLCDTest.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+DWINLCDTest.elf DWINLCDTest.map: $(OBJS) $(USER_OBJS) C:\Users\Mohamad\Documents\GitHub\EmbeddedSystems_Practical\STM32F4\DWINLCDTest\STM32F407ZGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "DWINLCDTest.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\Mohamad\Documents\GitHub\EmbeddedSystems_Practical\STM32F4\DWINLCDTest\STM32F407ZGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="DWINLCDTest.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

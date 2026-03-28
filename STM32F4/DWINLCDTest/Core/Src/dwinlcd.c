@@ -20,7 +20,11 @@ void DWINDriverInit(dwinDriver *driver, UART_HandleTypeDef *huart){
 }
 
 HAL_StatusTypeDef DWINSendCommand(dwinDriver *driver, uint8_t *data, uint16_t size){
-	return HAL_UART_Transmit(driver->huart, data, size, 100);
+	HAL_StatusTypeDef status;
+	status = HAL_UART_Transmit(driver->huart, data, size, 100);
+
+	while(status == HAL_BUSY) HAL_Delay(5);
+	return HAL_OK;
 }
 
 void DWINDriverListening(dwinDriver *driver){
@@ -31,6 +35,7 @@ void DWINDriverListening(dwinDriver *driver){
 
 HAL_StatusTypeDef isConnected(dwinDriver *driver){
 	uint8_t cmd[] = {0x5A, 0xA5, 0x04, 0x83, 0x00, 0x31, 0x01};
+	driver->cmdType = wrData;
 	if(DWINSendCommand(driver, cmd, sizeof(cmd)) != HAL_OK) return HAL_ERROR;
 
 	if(driver->responseBuffer[0] != 0x5A)return HAL_ERROR;
@@ -57,6 +62,7 @@ HAL_StatusTypeDef isConnected(dwinDriver *driver){
 void nextPage(dwinDriver *driver){
 
 	uint8_t currentPage[] = {0x5A, 0xA5, 0x04, 0x83, 0x00, 0x14, 0x01};
+	driver->cmdType = pageChange;
 	DWINSendCommand(driver, currentPage, sizeof(currentPage));
 	uint8_t page1, page2;
 	if(driver->responseBuffer[8] == 0xFF){
@@ -74,6 +80,7 @@ void nextPage(dwinDriver *driver){
 void previousPage(dwinDriver *driver){
 
 	uint8_t currentPage[] = {0x5A, 0xA5, 0x04, 0x83, 0x00, 0x14, 0x01};
+	driver->cmdType = pageChange;
 	DWINSendCommand(driver, currentPage, sizeof(currentPage));
 	uint8_t page1, page2;
 	if(driver->responseBuffer[8] == 0x00 && driver->responseBuffer[7] != 0x00){
@@ -93,12 +100,14 @@ void previousPage(dwinDriver *driver){
 
 }
 void gotoPage(dwinDriver *driver, const uint16_t page){
+	driver->cmdType = pageChange;
 	uint8_t page1 = page & 0xFF;
 	uint8_t page2 = (page >> 8) & 0xFF;
 	uint8_t command[] = {0x5A, 0xA5, 0x07, 0x82, 0x00, 0x84, 0x5A, 0x01, page2, page1};
 	DWINSendCommand(driver, command, sizeof(command));
 }
 void writeSingleReg(dwinDriver *driver, const uint16_t registeraddress, const uint16_t value){
+	driver->cmdType = wrData;
 	uint8_t highAddress = (registeraddress >> 8) & 0xFF;
 	uint8_t lowAddress = registeraddress & 0xFF;
 	uint8_t highValue = (value >> 8) & 0xFF;
@@ -107,7 +116,8 @@ void writeSingleReg(dwinDriver *driver, const uint16_t registeraddress, const ui
 	DWINSendCommand(driver, singleRegCommand, sizeof(singleRegCommand));
 
 }
-void writeData(dwinDriver *driver, const uint16_t registeraddress, const uint8_t data[], const uint8_t length){
+void writeData(dwinDriver *driver, const uint16_t registeraddress, const uint8_t *data, const uint16_t length){
+	driver->cmdType = wrData;
 	uint8_t highByte = (registeraddress >> 8) & 0xFF; // Extract high byte
 	uint8_t lowByte = registeraddress & 0xFF;
 	uint8_t* newData = malloc(length + 6);
@@ -124,18 +134,22 @@ void writeData(dwinDriver *driver, const uint16_t registeraddress, const uint8_t
     free(newData);
 }
 void setSingleBit(dwinDriver *driver, const uint16_t registeraddress, const uint16_t Bitnumber){
+	driver->cmdType = wrData;
 	uint16_t val = 1;
 	val = val << Bitnumber;
 	uint16_t readPV = readSingleReg(driver, registeraddress);
 	readPV |= val;
+	HAL_Delay(5);
 	writeSingleReg(driver, registeraddress, readPV);
 
 }
 void resetSingleBit(dwinDriver *driver, const uint16_t registeraddress, const uint16_t Bitnumber){
+	driver->cmdType = wrData;
 	uint16_t val = 1;
 	val = val << Bitnumber;
 	uint16_t readPV = readSingleReg(driver, registeraddress);
 	readPV &= ~val;
+	HAL_Delay(5);
 	writeSingleReg(driver, registeraddress, readPV);
 
 
@@ -143,7 +157,8 @@ void resetSingleBit(dwinDriver *driver, const uint16_t registeraddress, const ui
 
 
 uint16_t readSingleReg(dwinDriver *driver, const uint16_t registeraddress){
-    uint8_t highByte = (registeraddress >> 8) & 0xFF; // Extract high byte
+	driver->cmdType = rdSingleReg;
+	uint8_t highByte = (registeraddress >> 8) & 0xFF; // Extract high byte
     uint8_t lowByte = registeraddress & 0xFF;
     uint8_t command[] = {0x5A, 0xA5, 0x04, 0x83, highByte, lowByte, 0x01};
     DWINSendCommand(driver, command, sizeof(command));
@@ -152,6 +167,7 @@ uint16_t readSingleReg(dwinDriver *driver, const uint16_t registeraddress){
     return result;
 }
 HAL_StatusTypeDef readSingleBit(dwinDriver *driver, const uint16_t registeraddress, const uint16_t Bitnumber){
+	driver->cmdType = rdSingleBit;
 	uint8_t highByte = (registeraddress >> 8) & 0xFF; // Extract high byte
 	uint8_t lowByte = registeraddress & 0xFF;
 	uint8_t command[] = {0x5A, 0xA5, 0x04, 0x83, highByte, lowByte, 0x01};
@@ -165,6 +181,7 @@ HAL_StatusTypeDef readSingleBit(dwinDriver *driver, const uint16_t registeraddre
 }
 void readReg(dwinDriver *driver, const uint16_t registeraddress, uint8_t numberOfBytes){
 
+	driver->cmdType = rdRegisters;
     uint8_t highByte = (registeraddress >> 8) & 0xFF; // Extract high byte
     uint8_t lowByte = registeraddress & 0xFF;
     uint8_t command[] = {0x5A, 0xA5, 0x04, 0x83, highByte, lowByte, numberOfBytes};
@@ -172,6 +189,7 @@ void readReg(dwinDriver *driver, const uint16_t registeraddress, uint8_t numberO
 
 }
 void readRTC(dwinDriver *driver){
+	driver->cmdType = rdRTC;
 	uint8_t command[] = {0x5A, 0xA5, 0x04, 0x83, 0x00, 0x10, 0x04};
 	DWINSendCommand(driver, command, sizeof(command));
 	year = driver->responseBuffer[7];
@@ -183,10 +201,12 @@ void readRTC(dwinDriver *driver){
 	second = driver->responseBuffer[13];
 }
 void writeRTC(dwinDriver *driver, uint8_t dayrtc, uint8_t monthrtc, uint8_t yearrtc, uint8_t hourrtc, uint8_t minutertc, uint8_t secondrtc, weekdays weekdayrtc){
-	 uint8_t command[] = {0x5A, 0xA5, 0x0B, 0x82, 0x00, 0x10, yearrtc, monthrtc, dayrtc, weekdayrtc, hourrtc, minutertc, secondrtc, 0x00};
+	driver->cmdType = wrData;
+	uint8_t command[] = {0x5A, 0xA5, 0x0B, 0x82, 0x00, 0x10, yearrtc, monthrtc, dayrtc, weekdayrtc, hourrtc, minutertc, secondrtc, 0x00};
 	 DWINSendCommand(driver, command, sizeof(command));
 }
 void buzzer(dwinDriver *driver, buzzer_duration buzzer){
+	driver->cmdType = buzOn;
 	uint8_t duration;
 	if(buzzer == BUZZ_1SEC){
 		duration = 0x7D;
@@ -203,3 +223,22 @@ void buzzer(dwinDriver *driver, buzzer_duration buzzer){
 	uint8_t command[] = {0x5A, 0xA5, 0x05, 0x82, 0x00, 0xA0, 0x00, duration};
 	DWINSendCommand(driver, command, sizeof(command));
 }
+
+// Handling Functions
+HAL_StatusTypeDef writeDataHandler(dwinDriver *driver, uint16_t len){
+	if(driver->responseBuffer[0] != 0x5A) return HAL_ERROR;
+	if(driver->responseBuffer[1] != 0xA5) return HAL_ERROR;
+	if(driver->responseBuffer[2] != 0x03) return HAL_ERROR;
+	if(driver->responseBuffer[3] != 0x82) return HAL_ERROR;
+	if(driver->responseBuffer[4] != 0x4F) return HAL_ERROR;
+	if(driver->responseBuffer[5] != 0x4F) return HAL_ERROR;
+
+	return HAL_OK;
+}
+
+HAL_StatusTypeDef readRTCHandler(dwinDriver *driver, uint8_t year,
+									uint8_t month, uint8_t day, uint8_t weekday,
+									uint8_t hour, uint8_t minute, uint8_t second){
+
+}
+

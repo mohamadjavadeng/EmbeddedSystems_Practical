@@ -1,0 +1,75 @@
+/*
+ * dwinlcd.h
+ *
+ *  Created on: Feb 16, 2026
+ *      Author: Mohamad
+ */
+
+#ifndef INC_DWINLCD_H_
+#define INC_DWINLCD_H_
+
+#include "stm32f4xx_hal.h"
+
+#define RESPONSEBUFFER 20
+
+typedef struct{
+	UART_HandleTypeDef *huart;
+	uint8_t responseBuffer[RESPONSEBUFFER];
+	uint16_t resLength;
+	uint8_t rxComplete;
+	uint8_t cmdType;
+}dwinDriver;
+
+typedef enum{
+	pageChange = 0,
+	wrData,
+	rdSingleReg,
+	rdSingleBit,
+	rdRegisters,
+	rdRTC,
+	buzOn
+}functionCode;
+
+
+typedef enum {
+    BUZZ_1SEC = 0,
+    BUZZ_500MSEC,
+    BUZZ_250MSEC
+}buzzer_duration;
+
+typedef enum {
+    SUNDAY = 0,
+    MONDAY,
+    TUESDAY,
+    WEDNESDAY,
+    THURSDAY,
+    FRIDAY,
+    SATURDAY
+}weekdays;
+
+
+
+/*
+ Defining Functions
+*/
+void DWINDriverInit(dwinDriver *driver, UART_HandleTypeDef *huart);
+HAL_StatusTypeDef DWINSendCommand(dwinDriver *driver, uint8_t *data, uint16_t size);
+void DWINDriverListening(dwinDriver *driver);
+HAL_StatusTypeDef isConnected(dwinDriver *driver);
+void nextPage(dwinDriver *driver);
+void previousPage(dwinDriver *driver);
+void gotoPage(dwinDriver *driver, const uint16_t page);
+void writeSingleReg(dwinDriver *driver, const uint16_t registeraddress, const uint16_t value);
+void writeData(dwinDriver *driver, const uint16_t registeraddress, const uint8_t data[], const uint8_t length);
+void setSingleBit(dwinDriver *driver, const uint16_t registeraddress, const uint16_t Bitnumber);
+void resetSingleBit(dwinDriver *driver, const uint16_t registeraddress, const uint16_t Bitnumber);
+uint16_t readSingleReg(dwinDriver *driver, const uint16_t registeraddress);
+HAL_StatusTypeDef readSingleBit(dwinDriver *driver, const uint16_t registeraddress, const uint16_t Bitnumber);
+void readReg(dwinDriver *driver, const uint16_t registeraddress, uint8_t numberOfBytes);
+void readRTC(dwinDriver *driver);
+void writeRTC(dwinDriver *driver, uint8_t dayrtc, uint8_t monthrtc, uint8_t yearrtc, uint8_t hourrtc, uint8_t minutertc, uint8_t secondrtc, weekdays weekdayrtc);
+void buzzer(dwinDriver *driver, buzzer_duration buzzer);
+
+// Handling functions
+
+#endif /* INC_DWINLCD_H_ */
