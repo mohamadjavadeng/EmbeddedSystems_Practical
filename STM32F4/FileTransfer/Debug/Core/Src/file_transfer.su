@@ -1,0 +1,6 @@
+../Core/Src/file_transfer.c:81:10:FT_CRC16	32	static
+../Core/Src/file_transfer.c:105:6:FT_SendResponse	40	static
+../Core/Src/file_transfer.c:135:6:FT_ProcessPacket	1040	static
+../Core/Src/file_transfer.c:245:6:FT_processByte	16	static
+../Core/Src/file_transfer.c:351:6:FT_SendPacket	1080	static
+../Core/Src/file_transfer.c:396:6:FT_SendFile	1272	static
