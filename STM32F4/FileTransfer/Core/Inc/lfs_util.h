@@ -44,6 +44,8 @@
 #include <string.h>
 #include <inttypes.h>
 
+#define LFS_NO_ASSERT
+
 #ifndef LFS_NO_MALLOC
 #include <stdlib.h>
 #endif

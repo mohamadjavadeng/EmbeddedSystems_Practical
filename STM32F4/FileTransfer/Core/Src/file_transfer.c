@@ -14,6 +14,7 @@
 
 extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart1;
+extern TIM_HandleTypeDef htim6;
 extern fileHandeler flhdl;
 
 
@@ -70,10 +71,35 @@ static uint16_t expected_seq = 0;
 
 static uint32_t file_size;
 static uint32_t file_crc;
-
+static uint8_t txTimeout = 0;
 
 static char filename[64];
 
+/* -------------------------------------------------- */
+/* MicroSecond */
+/* -------------------------------------------------- */
+void delay_us(uint16_t us){
+	TIM6->CNT = 0;
+	while(TIM6->CNT < us);
+
+}
+
+void FT_ResetState(void)
+{
+    state = WAIT_SOF1;
+
+    header_index = 0;
+    payload_index = 0;
+
+    packet_type = 0;
+    packet_seq = 0;
+    payload_len = 0;
+
+    rx_crc = 0;
+    calc_crc = 0;
+
+    expected_seq = 0;
+}
 /* -------------------------------------------------- */
 /* CRC16 */
 /* -------------------------------------------------- */
@@ -191,11 +217,13 @@ void FT_ProcessPacket()
 
     else if(packet_type == TYPE_DATA)
     {
-        if(flhdl.fsBusy)
-        {
-            FT_SendResponse(TYPE_NACK, packet_seq);
-            return;
-        }
+        while((flhdl.fsBusy == 1) && txTimeout < 100){
+    		txTimeout++;
+    		delay_us(5000);
+    	}
+        flhdl.fsBusy = 0;
+    	txTimeout = 0;
+        __disable_irq();
         flhdl.payloadWrite = payload_len;
 
         flhdl.sequenceWrite = expected_seq;
@@ -205,6 +233,7 @@ void FT_ProcessPacket()
 				payload_len);
 
     	flhdl.writeFlag = 1;
+        __enable_irq();
         expected_seq++;
 
         FT_SendResponse(TYPE_ACK, packet_seq);
@@ -214,13 +243,11 @@ void FT_ProcessPacket()
 
     else if(packet_type == TYPE_END)
     {
-    	flhdl.writeFlag = 0;
-
-        printf("TRANSFER COMPLETE\r\n");
+    	flhdl.fileClose = 1;
         expected_seq = 0;
         flhdl.sequenceWrite = 0;
         FT_SendResponse(TYPE_ACK, packet_seq);
-        flhdl.fileClose = 1;
+        FT_ResetState();
 
     }
     else if(packet_type == TYPE_REQUEST)
@@ -232,10 +259,6 @@ void FT_ProcessPacket()
         flhdl.requestName[payload_len] = 0;
         flhdl.fileClose = 0;
         flhdl.requestFile = 1;
-
-//        FT_SendResponse(TYPE_ACK,
-//                        packet_seq);
-//        FT_SendFile(flhdl.requestName);
     }
 }
 
@@ -249,8 +272,6 @@ void FT_processByte(uint8_t byte){
 			if(byte == 0x55){
 				state = WAIT_SOF2;
 				flhdl.writeFlag = 0;
-//				flhdl.requestFile = 0;
-//				HAL_UART_Transmit(&huart1, "first byte\n", 11, 100);
 			}
 		break;
         case WAIT_SOF2:
@@ -259,7 +280,6 @@ void FT_processByte(uint8_t byte){
             {
                 state = READ_HEADER;
                 header_index = 0;
-//                HAL_UART_Transmit(&huart1, "second byte\n", 12, 100);
             }
             else
             {
@@ -353,7 +373,7 @@ void FT_SendPacket(uint8_t type,
                    uint8_t *payload,
                    uint16_t length)
 {
-    uint8_t packet[1035];
+    uint8_t packet[1160];
 
     uint16_t sof = SOF;
 
@@ -393,11 +413,13 @@ void FT_SendPacket(uint8_t type,
 }
 
 
-void FT_SendFile(char *filename)
+/*
+ * Sending File from NOR Flash to PC
+ */void FT_SendFile(char *filename)
 {
     lfs_file_t file;
 
-    uint8_t buffer[MAX_PAYLOAD];
+    static uint8_t buffer[MAX_PAYLOAD];
 
     uint16_t seq = 0;
 
@@ -412,7 +434,7 @@ void FT_SendFile(char *filename)
                      filename,
                      LFS_O_RDONLY) < 0)
     {
-        printf("OPEN FAILED\r\n");
+//        printf("OPEN FAILED\r\n");
         return;
     }
 
@@ -424,7 +446,7 @@ void FT_SendFile(char *filename)
 
     /* START PAYLOAD */
 
-    uint8_t start_payload[128];
+    static uint8_t start_payload[128];
 
     uint32_t file_crc = 0;
 
@@ -454,7 +476,6 @@ void FT_SendFile(char *filename)
 
     seq++;
 
-//    HAL_Delay(20);
 
     /* SEND FILE DATA */
 
@@ -489,6 +510,5 @@ void FT_SendFile(char *filename)
     lfs_file_close(&lfs,
                    &file);
 
-    printf("SEND COMPLETE\r\n");
     flhdl.requestFile = 0;
 }

@@ -46,6 +46,8 @@
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi2;
 
+TIM_HandleTypeDef htim6;
+
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart3_rx;
@@ -64,7 +66,7 @@ struct lfs_info info;
 uint8_t readBuffer[256];
 uint32_t sizeFile1;
 uint8_t sendingFlag = 0;
-
+volatile uint8_t txBusy = 0;
 /*	UART DMA Idle Mode Packet	*/
 uint8_t uart3_rx_dma[1024];
 
@@ -142,9 +144,9 @@ int lfs_sync(const struct lfs_config *c)
 
 
 /*--------------------------
-|							|
-|	USART IDEAL Mode		|
-| 							|
+|							              |
+|	USART IDEAL Mode		      |
+| 							            |
  --------------------------*/
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart,
                                 uint16_t Size)
